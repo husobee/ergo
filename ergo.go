@@ -1,22 +1,21 @@
 // Copyright 2015 byteslice - all rights reserved
 // This source code is governed by "The MIT License" which is found in the LICENSE file
 
-// package ergo - ergo is a simple and sane web application framework
+// Package ergo - ergo is a simple and sane web application framework
 package ergo
 
 import (
 	"errors"
 	"net/http"
 
+	"github.com/byteslice/ergo/ergoutils"
+
 	"golang.org/x/net/context"
 )
 
-const (
-	// ContextRequestKey - The key by which one accesses the http.Request from
-	// the context.  request := ctx.Value(ContextRequestKey)
-	contextRequestKey int = iota
-	middlewareKey
-	middlewareCounter
+var (
+	// ErrNoMiddleware - Error when calling Next to get next middleware handler
+	ErrNoMiddleware = errors.New("Ergo - No Next Middleware")
 )
 
 // HandlerFunc - Ergo Handler Function type
@@ -34,41 +33,66 @@ func NewErgo() *Ergo {
 	}
 }
 
+//Middleware - Interface to define what a Middleware is
+type Middleware interface {
+	GetFunc(int) (HandlerFunc, error)
+}
+
 // middleware is a structure to hold chained middlewares and positional indication
 type middleware struct {
-	chain   []HandlerFunc
-	counter int
+	chain []HandlerFunc
 }
 
-// GetRequest - Helper function to get the request from the ctx
-func GetRequest(ctx context.Context) *http.Request {
-	if r, ok := ctx.Value(contextRequestKey).(*http.Request); ok && r != nil {
-		return r
-	}
-	return nil
+// middleware counter struct
+type counter struct {
+	i int
 }
 
-// Next - Helper function to call the next middleware from the current handlerfunc
-func Next(ctx context.Context, w http.ResponseWriter) error {
-	if m, ok := ctx.Value(middlewareKey).(*middleware); ok && m != nil {
-		m.counter += 1
-		return m.chain[m.counter-1](ctx, w)
+// GetFunc - implementation of Middleware
+func (m *middleware) GetFunc(i int) (HandlerFunc, error) {
+	if len(m.chain) >= i {
+		return m.chain[i-1], nil
 	}
-	return errors.New("middleware chain break")
+	return nil, ErrNoMiddleware
 }
 
 // Use - Insert a middleware into the chain
 func (e *Ergo) Use(h HandlerFunc) {
-	if m, ok := e.context.Value(middlewareKey).(*middleware); ok && m != nil {
+	if m, ok := e.context.Value(ergoutils.ContextMiddlewareKey).(*middleware); ok && m != nil {
 		m.chain = append(m.chain, h)
 		return
 	}
-	e.context = context.WithValue(e.context, middlewareKey, &middleware{chain: []HandlerFunc{h}, counter: 0})
+	e.context = context.WithValue(e.context, ergoutils.ContextMiddlewareKey, &middleware{chain: []HandlerFunc{h}})
 }
 
 // ServeHTTP - implementation of standard http.Handler
 func (e *Ergo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// define new context from base context, include request
-	ctx := context.WithValue(e.context, contextRequestKey, r)
+	ctx := context.WithValue(e.context, ergoutils.ContextRequestKey, r)
+	ctx = context.WithValue(ctx, ergoutils.ContextMiddlewareCounterKey, &counter{0})
 	Next(ctx, w)
+}
+
+// Next - Helper function to call the next middleware from the current handlerfunc
+func Next(ctx context.Context, w http.ResponseWriter) error {
+	if m, ok := ctx.Value(ergoutils.ContextMiddlewareKey).(Middleware); ok && m != nil {
+		// increment counter off context
+		if counter, ok := ctx.Value(ergoutils.ContextMiddlewareCounterKey).(*counter); ok {
+			counter.i++
+			f, err := m.GetFunc(counter.i)
+			if err != nil {
+				if err == ErrNoMiddleware {
+					// end of chain
+					return nil
+				}
+				return err
+			}
+			if err := f(ctx, w); err != nil {
+				return err
+			}
+
+			return Next(ctx, w)
+		}
+	}
+	return ErrNoMiddleware
 }
