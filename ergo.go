@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/husobee/ergo/ergoutils"
+	"github.com/byteslice/ergo/ergoutils"
 
 	"golang.org/x/net/context"
 )

@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/husobee/ergo/ergoutils"
+	"golang.org/x/net/context"
+
+	"github.com/byteslice/ergo/ergoutils"
 
 	"log"
-
-	"golang.org/x/net/context"
 )
 
 func TestMiddleware(t *testing.T) {
