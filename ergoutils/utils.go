@@ -11,13 +11,13 @@ import (
 )
 
 const (
+	// ContextErgoKey - the key by which one accesses the ergo struct from
+	ContextErgoKey int = iota
 	// ContextRequestKey - The key by which one accesses the http.Request from
 	// the context.  request := ctx.Value(ContextRequestKey)
-	ContextRequestKey int = iota
-	// ContextMiddlewareKey - The key by which one accesses the Context Middleware
-	ContextMiddlewareKey
-	// ContextMiddlewareCounterKey - The key by which one accesses the Context Middleware
-	ContextMiddlewareCounterKey
+	ContextRequestKey
+	// ContextMiddlewareStepCountKey - The key by which one accesses the Context Middleware
+	ContextMiddlewareStepCountKey
 )
 
 // GetRequest - Helper function to get the request from the ctx

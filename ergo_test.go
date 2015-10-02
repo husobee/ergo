@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/byteslice/ergo/ergoutils"
+	"github.com/husobee/ergo/ergoutils"
 
 	"log"
 
@@ -15,7 +15,7 @@ import (
 
 func TestMiddleware(t *testing.T) {
 	// new ergo server
-	e := NewErgo()
+	e := NewErgo(context.Background())
 	// Use the anonymous function as a middleware, which wraps sub middlewares
 	e.Use(
 		func(ctx context.Context, w http.ResponseWriter) error {
@@ -34,9 +34,8 @@ func TestMiddleware(t *testing.T) {
 			log.Printf("End Middleware 1, took %d nanoseconds", time.Since(start).Nanoseconds())
 			return nil
 
-		})
-	// Use the anonymous function as a middleware, which wraps sub middlewares
-	e.Use(
+		},
+		// Use the anonymous function as a middleware, which wraps sub middlewares
 		func(ctx context.Context, w http.ResponseWriter) error {
 			// get current time
 			start := time.Now()
@@ -53,9 +52,8 @@ func TestMiddleware(t *testing.T) {
 			log.Printf("End Middleware 2, took %d nanoseconds", time.Since(start).Nanoseconds())
 			return nil
 
-		})
-	// Use the anonymous function as a middleware, which wraps sub middlewares
-	e.Use(
+		},
+		// Use the anonymous function as a middleware, which wraps sub middlewares
 		func(ctx context.Context, w http.ResponseWriter) error {
 			// get current time
 			start := time.Now()
